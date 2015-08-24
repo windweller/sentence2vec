@@ -66,6 +66,7 @@ import heapq
 import time
 from copy import deepcopy
 import threading
+import glob
 try:
     from queue import Queue
 except ImportError:
@@ -1112,6 +1113,30 @@ class LineSentence(object):
                 for line in fin:
                     yield utils.to_unicode(line).split()
 
+
+class DirectoryForSentence(object):
+    """
+    Pass in a directory, and this iterator goes through
+    all the files inside, and treat each one as a sentence
+    """
+    def __init__(self, dirloc):
+        """
+        directory location, do not end with \\
+        it also puts a "fileindex.txt" file under the higher level dir
+        """
+        self.dirloc = dirloc
+        self.currentFile = ""
+        self.remainingFiles = glob.glob(dirloc + "\\*.txt")
+        self.fileNum = 0
+
+    def __iter__(self):
+        """
+        iterate through lines and then files
+        """
+        while self.fileNum < len(self.remainingFiles):
+            with open(self.remainingFiles[self.fileNum], 'r') as content_file:
+                self.fileNum += 1
+                yield content_file.read().split()
 
 
 # Example: ./word2vec.py ~/workspace/word2vec/text8 ~/workspace/word2vec/questions-words.txt ./text8
