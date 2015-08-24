@@ -16,3 +16,7 @@ install requires:
 
 
 2014-9-23 update: add test files for demo.
+
+## Fork Changes
+Added class `DirectoryForSentence` to iterator over a folder, treating each file as a "sentence".
+Added a MTurk python script to preprocess CSV formatted file and put into a directory for `DirectoryForSentence`
