@@ -67,6 +67,7 @@ import time
 from copy import deepcopy
 import threading
 import glob
+import itertools
 try:
     from queue import Queue
 except ImportError:
@@ -273,8 +274,9 @@ class Word2Vec(utils.SaveLoad):
         self.negative = negative
         self.cbow_mean = int(cbow_mean)
         if sentences is not None:
-            self.build_vocab(sentences)
-            self.train(sentences)
+            s, s_2 = itertools.tee(sentences) #this is the way to reuse iterators
+            self.build_vocab(s)
+            self.train(s_2)
 
     def make_table(self, table_size=100000000, power=0.75):
         """
@@ -443,7 +445,7 @@ class Word2Vec(utils.SaveLoad):
             thread.start()
 
         def prepare_sentences():
-            for sentence in sentences:
+            for sentence in sentences: # NOTICE: this could be the reason why it's not working
                 # avoid calling random_sample() where prob >= 1, to speed things up a little:
                 sampled = [self.vocab[word] for word in sentence
                     if word in self.vocab and (self.vocab[word].sample_probability >= 1.0 or self.vocab[word].sample_probability >= random.random_sample())]
@@ -1136,7 +1138,58 @@ class DirectoryForSentence(object):
         while self.fileNum < len(self.remainingFiles):
             with open(self.remainingFiles[self.fileNum], 'r') as content_file:
                 self.fileNum += 1
-                yield content_file.read().split()
+                yield utils.to_unicode(content_file.read()).split()
+
+
+class DirectoryFileForSentence(object):
+    """
+    Pass in a directory, this will generate sentence line by line for each file
+    """
+    def __init__(self, dirloc):
+        """
+        directory location, do not end with \\
+        it also puts a "fileindex.txt" file under the higher level dir
+        """
+        self.dirloc = dirloc
+        self.currentFile = ""
+        self.remainingFiles = glob.glob(dirloc + "\\*.txt")
+        self.fileNum = 0
+
+    def __iter__(self):
+        """
+        iterate through lines and then files
+        """
+        while self.fileNum < len(self.remainingFiles):
+            with open(self.remainingFiles[self.fileNum], 'r') as content_file:
+                self.fileNum += 1
+                for line in content_file:
+                    yield utils.to_unicode(line).split()
+
+class NYTCorpus(object):
+    """
+    Pass in the directory where NYT corpus is stored
+    """
+    def __init__(self, dirloc):
+        """
+        directory location, do not end with \\
+        it also puts a "fileindex.txt" file under the higher level dir
+        """
+        self.dirloc = dirloc
+        self.currentFile = ""
+        self.remainingFiles = glob.glob(dirloc + "\\*.txt")
+        self.fileNum = 0
+
+    def __iter__(self):
+        """
+        iterate through lines and then files
+        only grab the 
+        """
+        while self.fileNum < len(self.remainingFiles):
+            with open(self.remainingFiles[self.fileNum], 'r') as content_file:
+                self.fileNum += 1
+                next(content_file) #skip header row
+                for line in content_file:
+                    yield utils.to_unicode(line.split("\t")[1]).split()
 
 
 # Example: ./word2vec.py ~/workspace/word2vec/text8 ~/workspace/word2vec/questions-words.txt ./text8
